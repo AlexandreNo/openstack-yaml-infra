@@ -1,7 +1,4 @@
-# all-without-ceph-osd is for server without enough disks to run Ceph OSD devices
-# otherwise, we should use all-with-ceph-osd
-
-name: 3nodes
+name: 3ctrl_3networker_Xcpt_cephless
 profiles:
   install-server:
     arity: 1
@@ -9,12 +6,12 @@ profiles:
     steps:
       1:
         roles:
-          - cloud::database::nosql::redis::server
+          - cloud::database::nosql::redis
           - cloud::install::puppetdb::server
     serverspec_config:
       puppetdb_server: puppetdb_server
-  openstack-full:
-    arity: 3
+  controller:
+    arity: 3+2n
     edeploy: openstack-full
     steps:
       1:
@@ -23,18 +20,13 @@ profiles:
           - cloud::database::nosql::mongodb::mongod
           - cloud::messaging
           - cloud::database::nosql::memcached
-          - cloud::storage::rbd::monitor
-          - cloud::storage::rbd::key
       2:
         roles:
           - cloud::loadbalancer
-          - cloud::storage::rbd::osd
           - cloud::dashboard
-          - cloud::object::storage
       3:
         roles:
           - cloud::identity
-          - cloud::storage::rbd::pools
       4:
         roles:
           - cloud::compute::api
@@ -42,12 +34,7 @@ profiles:
           - cloud::compute::conductor
           - cloud::compute::consoleauth
           - cloud::compute::consoleproxy
-          - cloud::compute::hypervisor
           - cloud::compute::scheduler
-# Experimental
-#          - cloud::database::dbaas::api
-#          - cloud::database::dbaas::conductor
-#          - cloud::database::dbaas::taskmanager
           - cloud::volume::api
           - cloud::volume::backup
           - cloud::volume::scheduler
@@ -62,9 +49,28 @@ profiles:
           - cloud::network::controller
           - cloud::orchestration::api
           - cloud::orchestration::engine
-          - cloud::object::controller
-          - cloud::object::ringbuilder
           - cloud::spof
+    serverspec_config:
+      ks_user_name: ks_admin_tenant
+      ks_user_password: ks_admin_password
+      ks_tenant_name: ks_admin_tenant
+      vip_public: vip_public_fqdn
+      endpoint_protocol: endpoint_protocol
+      virt_type: libvirt_type
+      neutron_password: ks_neutron_password
+      neutron_endpoint: vip_public_fqdn
+      neutron_protocol: ks_neutron_admin_proto
+      neutron_type_drivers: neutron_type_drivers
+      neutron_mechanism_drivers: neutron_mechanism_drivers
+      neutron_tunnel_id_ranges: neutron_tunnel_id_ranges
+      neutron_firewall_driver: neutron_firewall_driver
+      syslog_server: syslog_server
+      syslog_port: syslog_port
+      puppetdb_server: puppetdb_server
+  networker:
+    arity: 3+2n
+    edeploy: openstack-full
+    steps:
       5:
         roles:
           - cloud::network::dhcp
@@ -88,26 +94,47 @@ profiles:
       syslog_server: syslog_server
       syslog_port: syslog_port
       puppetdb_server: puppetdb_server
+  compute:
+    arity: 1+n
+    edeploy: openstack-full
+    steps:
+      4:
+        roles:
+          - cloud::compute::hypervisor
+    serverspec_config:
+      ks_user_name: ks_admin_tenant
+      ks_user_password: ks_admin_password
+      ks_tenant_name: ks_admin_tenant
+      vip_public: vip_public_fqdn
+      endpoint_protocol: endpoint_protocol
+      virt_type: libvirt_type
+      neutron_password: ks_neutron_password
+      neutron_endpoint: vip_public_fqdn
+      neutron_protocol: ks_neutron_admin_proto
+      neutron_type_drivers: neutron_type_drivers
+      neutron_mechanism_drivers: neutron_mechanism_drivers
+      neutron_tunnel_id_ranges: neutron_tunnel_id_ranges
+      neutron_firewall_driver: neutron_firewall_driver
+      syslog_server: syslog_server
+      syslog_port: syslog_port
+      puppetdb_server: puppetdb_server
 
 ordered_profiles:
   - install-server
-  - openstack-full
+  - controller
+  - networker
+  - compute
 
 serverspec:
   cloud::database::sql::mysql: database
   cloud::messaging: messaging
   cloud::database::nosql::memcached: cache
-  cloud::database::nosql::redis::server: redis_server
-  cloud::storage::rbd::monitor: storage_controller
   cloud::identity: identity
   cloud::network::dhcp: network
   cloud::loadbalancer: lb
-  cloud::storage::rbd::osd: storage_node
   cloud::compute::hypervisor: compute
   cloud::compute::api: controller
   cloud::dashboard: dashboard
-  cloud::object::controller: object_proxy
-  cloud::object::storage: object_storage
   cloud::spof: spof
   cloud::install::puppetdb::server: puppetdb_server
   cloud::install::puppetdb::config: puppetdb_config

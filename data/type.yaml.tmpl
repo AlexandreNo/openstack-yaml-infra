@@ -3,6 +3,8 @@
 {% if prof == profile %}
 {% if profiles[profile]['steps'] %}
 classes:
+  - cloud
+  - cloud::install::puppetdb::config
 {% for step_num in profiles[profile]['steps'] %}
 {% if step_num <= step %}
 {% for role in profiles[profile]['steps'][step_num]['roles'] %}
@@ -22,12 +24,45 @@ cloud::root_password: "%{hiera('root_password')}"
 cloud::dns_ips: "%{hiera('dns_ips')}"
 cloud::site_domain: "%{hiera('site_domain')}"
 cloud::motd_title: "%{hiera('motd_title')}"
+cloud::selinux_mode: "%{hiera('selinux')}"
+cloud::selinux_directory: "%{hiera('selinux_directory')}"
+cloud::selinux_booleans: "%{hiera('selinux_booleans')}"
+cloud::selinux_modules: "%{hiera('selinux_modules')}"
+cloud::manage_firewall: "%{hiera('manage_firewall')}"
+cloud::firewall_rules: "%{hiera('firewall_rules')}"
+cloud::purge_firewall_rules: "%{hiera('purge_firewall_rules')}"
+cloud::firewall_pre_extras: "%{hiera('firewall_pre_extras')}"
+cloud::firewall_post_extras: "%{hiera('firewall_post_extras')}"
+cloud::firewall::post::debug: "%{hiera('firewall_debug')}"
 
 #
-# cloud::cache
+# cloud::selinux (private)
 #
-cloud::cache::listen_ip: "%{hiera('internal_netif_ip')}"
+# cloud::selinux::mode:
+# cloud::selinux::directory:
+# cloud::selinux::modules:
+# cloud::selinux::booleans:
 
+#
+# cloud::database::nosql::memcached
+#
+cloud::database::nosql::memcached::listen_ip: "%{hiera('internal_netif_ip')}"
+cloud::database::nosql::memcached::firewall_settings: "%{hiera('firewall_common_extras')}"
+
+#
+# cloud::database::nosql::redis
+#
+cloud::database::nosql::redis::server::port: "%{hiera('redis_port')}"
+cloud::database::nosql::redis::server::firewall_settings: "%{hiera('firewall_common_extras')}"
+cloud::database::nosql::redis::sentinel::port: "%{hiera('sentinel_port')}"
+cloud::database::nosql::redis::sentinel::firewall_settings: "%{hiera('firewall_common_extras')}"
+
+#
+# cloud::database::nosql::elasticsearch
+#
+cloud::database::nosql::elasticsearch::listen_port: "%{hiera('elsaticsearch_port')}"
+cloud::database::nosql::elasticsearch::listen_ip: "%{hiera('elasticsearch_bind_ip')}"
+cloud::database::nosql::elasticsearch::firewall_settings: "%{hiera('firewall_common_extras')}"
 #
 # cloud::compute
 #
@@ -56,6 +91,9 @@ cloud::compute::hypervisor::server_proxyclient_address: "%{hiera('internal_netif
 cloud::compute::hypervisor::libvirt_type: "%{hiera('libvirt_type')}"
 cloud::compute::hypervisor::ks_nova_public_proto: "%{hiera('ks_nova_public_proto')}"
 cloud::compute::hypervisor::ks_nova_public_host: "%{hiera('ks_nova_public_host')}"
+cloud::compute::hypervisor::console: "%{hiera('nova_console')}"
+cloud::compute::hypervisor::ks_console_public_proto: "%{hiera('ks_console_public_proto')}"
+cloud::compute::hypervisor::ks_console_public_host: "%{hiera('ks_console_public_host')}"
 cloud::compute::hypervisor::nova_ssh_private_key: "%{hiera('nova_ssh_private_key')}"
 cloud::compute::hypervisor::nova_ssh_public_key: "%{hiera('nova_ssh_public_key')}"
 cloud::compute::hypervisor::nova_shell: "%{hiera('nova_shell')}"
@@ -79,10 +117,16 @@ cloud::compute::api::api_eth: "%{hiera('api_eth')}"
 cloud::compute::api::ks_nova_public_port: "%{hiera('nova_port')}"
 cloud::compute::api::ks_ec2_public_port: "%{hiera('nova_ec2_port')}"
 cloud::compute::api::ks_metadata_public_port: "%{hiera('nova_metadata_port')}"
+cloud::compute::api::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 cloud::compute::consoleproxy::api_eth: "%{hiera('api_eth')}"
+cloud::compute::consoleproxy::console: "%{hiera('nova_console')}"
 cloud::compute::consoleproxy::spice_port: "%{hiera('spice_port')}"
+cloud::compute::consoleproxy::novnc_port: "%{hiera('novnc_port')}"
 cloud::compute::consoleproxy::secure: "%{hiera('spice_secure')}"
+cloud::compute::consoleproxy::firewall_settings: "%{hiera('firewall_common_extras')}"
+
+cloud::compute::scheduler::scheduler_default_filters: "%{hiera('nova_scheduler_default_filters')}"
 
 #
 # cloud::dashboard
@@ -104,11 +148,15 @@ cloud::dashboard::horizon_ca: "%{hiera('horizon_ca')}"
 cloud::dashboard::ssl_forward: "%{hiera('horizon_ssl_forward')}"
 cloud::dashboard::os_endpoint_type: "%{hiera('horizon_endpoint_type')}"
 cloud::dashboard::allowed_hosts: "%{hiera('horizon_allowed_hosts')}"
+cloud::dashboard::vhost_extra_params: "%{hiera('horizon_vhost_extra_params')}"
+cloud::dashboard::neutron_extra_options: "%{hiera('horizon_neutron_extra_options')}"
+cloud::dashboard::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 #
 # cloud::identity
 #
 cloud::identity::swift_enabled: "%{hiera('swift_enabled')}"
+cloud::identity::cinder_enabled: "%{hiera('cinder_enabled')}"
 cloud::identity::trove_enabled: "%{hiera('trove_enabled')}"
 cloud::identity::identity_roles_addons: "%{hiera('swift_identity_roles_addons')}"
 cloud::identity::keystone_db_host: "%{hiera('keystone_db_host')}"
@@ -118,6 +166,7 @@ cloud::identity::memcache_servers: "%{hiera('memcache_servers')}"
 cloud::identity::ks_admin_email: "%{hiera('ks_admin_email')}"
 cloud::identity::ks_admin_password: "%{hiera('ks_admin_password')}"
 cloud::identity::ks_admin_tenant: "%{hiera('ks_admin_tenant')}"
+cloud::identity::ks_admin_roles: "%{hiera('ks_admin_roles')}"
 cloud::identity::ks_admin_token: "%{hiera('ks_admin_token')}"
 cloud::identity::ks_ceilometer_admin_host: "%{hiera('ks_ceilometer_admin_host')}"
 cloud::identity::ks_ceilometer_internal_host: "%{hiera('ks_ceilometer_internal_host')}"
@@ -203,6 +252,7 @@ cloud::identity::use_syslog: "%{hiera('keystone_use_syslog')}"
 cloud::identity::log_facility: "%{hiera('keystone_log_facility')}"
 cloud::identity::ks_token_expiration: "%{hiera('ks_token_expiration')}"
 cloud::identity::token_driver: "%{hiera('ks_token_driver')}"
+cloud::identity::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 #
 # cloud::image
@@ -229,7 +279,13 @@ cloud::image::api::debug: "%{hiera('glance_api_debug')}"
 cloud::image::api::log_facility: "%{hiera('glance_api_log_facility')}"
 cloud::image::api::use_syslog: "%{hiera('glance_api_use_syslog')}"
 cloud::image::api::backend: "%{hiera('glance_backend')}"
+cloud::image::api::known_stores: "%{hiera('glance_known_stores')}"
 cloud::image::api::filesystem_store_datadir: "%{hiera('glance_filesystem_store_datadir')}"
+cloud::image::api::nfs_device: "%{hiera('glance_nfs_device')}"
+cloud::image::api::nfs_options: "%{hiera('glance_nfs_options')}"
+cloud::image::api::pipeline: "%{hiera('glance_api_pipeline')}"
+cloud::image::api::firewall_settings: "%{hiera('firewall_common_extras')}"
+cloud::image::api::api_policies: "%{hiera('glance_api_policies')}"
 
 cloud::image::registry::glance_db_host: "%{hiera('glance_db_host')}"
 cloud::image::registry::glance_db_user: "%{hiera('glance_db_user')}"
@@ -244,6 +300,7 @@ cloud::image::registry::verbose: "%{hiera('glance_registry_verbose')}"
 cloud::image::registry::debug: "%{hiera('glance_registry_debug')}"
 cloud::image::registry::log_facility: "%{hiera('glance_registry_log_facility')}"
 cloud::image::registry::use_syslog: "%{hiera('glance_registry_use_syslog')}"
+cloud::image::registry::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 #
 # cloud::loadbalancer
@@ -260,6 +317,9 @@ cloud::loadbalancer::heat_cloudwatch_api: "%{hiera('heat_cloudwatch_api')}"
 cloud::loadbalancer::nova_api: "%{hiera('nova_api')}"
 cloud::loadbalancer::ec2_api: "%{hiera('nova_ec2_api')}"
 cloud::loadbalancer::metadata_api: "%{hiera('nova_metadata_api')}"
+cloud::loadbalancer::novnc: "%{hiera('novnc')}"
+cloud::loadbalancer::novnc_bind_options: "%{hiera('novnc_bind_options')}"
+cloud::loadbalancer::novnc_port: "%{hiera('novnc_port')}"
 cloud::loadbalancer::keystone_api: "%{hiera('keystone_api')}"
 cloud::loadbalancer::keystone_api_admin: "%{hiera('keystone_admin_api')}"
 cloud::loadbalancer::trove_api: "%{hiera('trove_api')}"
@@ -267,6 +327,8 @@ cloud::loadbalancer::horizon: "%{hiera('horizon')}"
 cloud::loadbalancer::horizon_ssl: "%{hiera('horizon_ssl')}"
 cloud::loadbalancer::spice: "%{hiera('spice')}"
 cloud::loadbalancer::rabbitmq: "%{hiera('rabbit')}"
+cloud::loadbalancer::kibana: "%{hiera('kibana3')}"
+cloud::loadbalancer::elasticsearch: "%{hiera('elasticsearch')}"
 cloud::loadbalancer::haproxy_auth: "%{hiera('haproxy_auth')}"
 cloud::loadbalancer::keepalived_auth_type:  "%{hiera('keepalived_auth_type')}"
 cloud::loadbalancer::keepalived_auth_pass:  "%{hiera('keepalived_auth_pass')}"
@@ -294,6 +356,8 @@ cloud::loadbalancer::nova_bind_options: "%{hiera('nova_bind_options')}"
 cloud::loadbalancer::trove_bind_options: "%{hiera('trove_bind_options')}"
 cloud::loadbalancer::swift_bind_options: "%{hiera('swift_bind_options')}"
 cloud::loadbalancer::spice_bind_options: "%{hiera('spice_bind_options')}"
+cloud::loadbalancer::kibana_bind_options: "%{hiera('kibana3_bind_options')}"
+cloud::loadbalancer::elasticsearch_bind_options: "%{hiera('elasticsearch_bind_options')}"
 cloud::loadbalancer::horizon_bind_options: "%{hiera('horizon_bind_options')}"
 cloud::loadbalancer::horizon_ssl_bind_options: "%{hiera('horizon_ssl_bind_options')}"
 cloud::loadbalancer::galera_bind_options: "%{hiera('galera_bind_options')}"
@@ -316,10 +380,14 @@ cloud::loadbalancer::rabbitmq_port: "%{hiera('rabbit_port')}"
 cloud::loadbalancer::horizon_port: "%{hiera('horizon_port')}"
 cloud::loadbalancer::horizon_ssl_port: "%{hiera('horizon_ssl_port')}"
 cloud::loadbalancer::spice_port: "%{hiera('spice_port')}"
+cloud::loadbalancer::kibana_port: "%{hiera('kibana3_port')}"
+cloud::loadbalancer::elasticsearch_port: "%{hiera('elasticsearch_port')}"
 cloud::loadbalancer::vip_public_ip: "%{hiera('vip_public_ip')}"
+cloud::loadbalancer::vip_monitor_ip: "%{hiera('vip_monitor_ip')}"
 cloud::loadbalancer::vip_internal_ip: "%{hiera('vip_internal_ip')}"
 cloud::loadbalancer::galera_ip: "%{hiera('galera_ip')}"
 cloud::loadbalancer::galera_slave: "%{hiera('galera_slave')}"
+cloud::loadbalancer::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 #
 # cloud::messaging
@@ -330,6 +398,8 @@ cloud::messaging::rabbit_password: "%{hiera('rabbit_password')}"
 cloud::messaging::haproxy_binding: "%{hiera('rabbit')}"
 cloud::messaging::rabbitmq_ip: "%{hiera('rabbit_ip')}"
 cloud::messaging::rabbitmq_port: "%{hiera('rabbit_port')}"
+cloud::messaging::erlang_cookie: "%{hiera('erlang_cookie')}"
+cloud::messaging::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 
 #
@@ -340,53 +410,55 @@ cloud::network::debug: "%{hiera('neutron_debug')}"
 cloud::network::rabbit_hosts: "%{hiera('rabbit_hosts')}"
 cloud::network::rabbit_password: "%{hiera('rabbit_password')}"
 cloud::network::api_eth: "%{hiera('api_eth')}"
-cloud::network::provider_vlan_ranges: "%{hiera('neutron_provider_vlan_ranges')}"
 cloud::network::use_syslog: "%{hiera('neutron_use_syslog')}"
 cloud::network::log_facility: "%{hiera('neutron_log_facility')}"
 cloud::network::dhcp_lease_duration: "%{hiera('neutron_dhcp_lease_duration')}"
-cloud::network::flat_networks: "%{hiera('neutron_flat_networks')}"
-cloud::network::tenant_network_types: "%{hiera('neutron_tenant_network_types')}"
-cloud::network::type_drivers: "%{hiera('neutron_type_drivers')}"
 cloud::network::plugin: "%{hiera('neutron_plugin')}"
-cloud::network::n1kv_vsm_ip: "%{hiera('neutron_n1kv_vsm_ip')}"
-cloud::network::n1kv_vsm_password: "%{hiera('neutron_n1kv_vsm_password')}"
-cloud::network::neutron_db_host: "%{hiera('neutron_db_host')}"
-cloud::network::neutron_db_user: "%{hiera('neutron_db_user')}"
-cloud::network::neutron_db_password: "%{hiera('neutron_db_password')}"
-cloud::network::ks_keystone_admin_host: "%{hiera('ks_keystone_admin_host')}"
-cloud::network::ks_keystone_admin_proto: "%{hiera('ks_keystone_admin_proto')}"
-cloud::network::ks_keystone_admin_port: "%{hiera('keystone_admin_port')}"
-cloud::network::ks_keystone_admin_password: "%{hiera('ks_admin_password')}"
-
 
 cloud::network::l3::external_int: "%{hiera('neutron_external_int')}"
 cloud::network::l3::ext_provider_net: "%{hiera('neutron_external_provider_net')}"
 cloud::network::l3::debug: "%{hiera('neutron_debug')}"
 cloud::network::l3::manage_tso: "%{hiera('manage_tso')}"
+cloud::network::l3::ha_enabled: "%{hiera('neutron_l3_ha_enabled')}"
+cloud::network::l3::ha_vrrp_auth_type: "%{hiera('neutron_l3_ha_vrrp_auth_type')}"
+cloud::network::l3::ha_vrrp_auth_password: "%{hiera('neutron_l3_ha_vrrp_auth_password')}"
+cloud::network::l3::allow_automatic_l3agent_failover: "%{hiera('neutron_l3_allow_automatic_l3agent_failover')}"
+cloud::network::l3::agent_mode: "%{hiera('neutron_l3_agent_mode')}"
 
 cloud::network::metadata::enabled: "%{hiera('neutron_metadata_enabled')}"
 cloud::network::metadata::debug: "%{hiera('neutron_debug')}"
 cloud::network::metadata::ks_neutron_password: "%{hiera('ks_neutron_password')}"
 cloud::network::metadata::neutron_metadata_proxy_shared_secret: "%{hiera('neutron_metadata_proxy_shared_secret')}"
-cloud::network::metadata::nova_metadata_server: "%{hiera('vip_public_ip')}"
+cloud::network::metadata::nova_metadata_server: "%{hiera('vip_public_fqdn')}"
 cloud::network::metadata::ks_keystone_admin_proto: "%{hiera('ks_keystone_admin_proto')}"
 cloud::network::metadata::ks_keystone_admin_port: "%{hiera('keystone_admin_port')}"
 cloud::network::metadata::ks_keystone_admin_host: "%{hiera('ks_keystone_admin_host')}"
 cloud::network::metadata::auth_region: "%{hiera('region')}"
-cloud::network::metadata::ks_nova_internal_proto: "%{hiera('ks_nova_internal_proto')}"
+cloud::network::metadata::ks_nova_internal_proto: "http"
 
 cloud::network::lbaas::manage_haproxy_pkg: "%{hiera('neutron_manage_haproxy_pkg')}"
 cloud::network::lbaas::debug: "%{hiera('neutron_debug')}"
 
 cloud::network::dhcp::veth_mtu: "%{hiera('neutron_veth_mtu')}"
 cloud::network::dhcp::debug: "%{hiera('neutron_debug')}"
-cloud::network::dhcp::dnsmasq_dns_server: "%{hiera('neutron_dnsmasq_dns_server')}"
+cloud::network::dhcp::dnsmasq_dns_servers: "%{hiera('neutron_dnsmasq_dns_servers')}"
+cloud::network::dhcp::firewall_settings: "%{hiera('firewall_common_extras')}"
 
+cloud::network::controller::flat_networks: "%{hiera('neutron_flat_networks')}"
+cloud::network::controller::provider_vlan_ranges: "%{hiera('neutron_provider_vlan_ranges')}"
+cloud::network::controller::tenant_network_types: "%{hiera('neutron_tenant_network_types')}"
+cloud::network::controller::type_drivers: "%{hiera('neutron_type_drivers')}"
+cloud::network::controller::mechanism_drivers: "%{hiera('neutron_mechanism_drivers')}"
+cloud::network::controller::tunnel_id_ranges: "%{hiera('neutron_tunnel_id_ranges')}"
+cloud::network::controller::vni_ranges: "%{hiera('neutron_vni_ranges')}"
+cloud::network::controller::l3_ha: "%{hiera('neutron_l3_ha_enabled')}"
+cloud::network::controller::router_distributed: "%{hiera('enable_distributed_routing')}"
 cloud::network::controller::neutron_db_host: "%{hiera('neutron_db_host')}"
 cloud::network::controller::neutron_db_user: "%{hiera('neutron_db_user')}"
 cloud::network::controller::neutron_db_password: "%{hiera('neutron_db_password')}"
 cloud::network::controller::ks_neutron_password: "%{hiera('ks_neutron_password')}"
 cloud::network::controller::ks_keystone_admin_host: "%{hiera('ks_keystone_admin_host')}"
+cloud::network::controller::ks_keystone_admin_port: "%{hiera('ks_keystone_admin_port')}"
 cloud::network::controller::ks_keystone_admin_proto: "%{hiera('ks_keystone_admin_proto')}"
 cloud::network::controller::ks_keystone_public_port: "%{hiera('keystone_port')}"
 cloud::network::controller::ks_neutron_public_port: "%{hiera('neutron_port')}"
@@ -399,9 +471,14 @@ cloud::network::controller::nova_admin_tenant_name:  "%{hiera('nova_admin_tenant
 cloud::network::controller::nova_admin_password:  "%{hiera('ks_nova_password')}"
 cloud::network::controller::nova_region_name: "%{hiera('region')}"
 cloud::network::controller::manage_ext_network: "%{hiera('neutron_manage_external_network')}"
+cloud::network::controller::firewall_settings: "%{hiera('firewall_common_extras')}"
+cloud::network::controller::plugin: "%{hiera('neutron_plugin')}"
+cloud::network::controller::n1kv_vsm_ip: "%{hiera('neutron_n1kv_vsm_ip')}"
+cloud::network::controller::n1kv_vsm_password: "%{hiera('neutron_n1kv_vsm_password')}"
 
-cloud::network::vswitch::driver:  "%{hiera('neutron_driver')}"
-cloud::network::vswitch::manage_ext_network:  "%{hiera('neutron_manage_external_network')}"
+cloud::network::vswitch::driver: "%{hiera('neutron_driver')}"
+cloud::network::vswitch::enable_distributed_routing: "%{hiera('enable_distributed_routing')}"
+cloud::network::vswitch::manage_ext_network: "%{hiera('neutron_manage_external_network')}"
 cloud::network::vswitch::external_int:  "%{hiera('neutron_external_int')}"
 cloud::network::vswitch::external_bridge:  "%{hiera('neutron_external_bridge')}"
 cloud::network::vswitch::tunnel_types:  "%{hiera('neutron_tunnel_types')}"
@@ -416,6 +493,7 @@ cloud::network::vswitch::node_type: "%{hiera('neutron_node_type')}"
 cloud::network::vswitch::vteps_in_same_subnet: "%{hiera('neutron_vteps_in_same_subnet')}"
 cloud::network::vswitch::n1kv_source: "%{hiera('neutron_n1kv_source')}"
 cloud::network::vswitch::n1kv_version: "%{hiera('neutron_n1kv_version')}"
+cloud::network::vswitch::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 #
 # cloud::object
@@ -435,6 +513,7 @@ cloud::object::controller::statsd_host: "%{hiera('statsd_host')}"
 cloud::object::controller::statsd_port: "%{hiera('statsd_port')}"
 cloud::object::controller::memcache_servers: "%{hiera('memcache_servers')}"
 cloud::object::controller::api_eth: "%{hiera('api_eth')}"
+cloud::object::controller::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 cloud::object::ringbuilder::enabled: "%{hiera('swift_ringbuilder_enabled')}"
 cloud::object::ringbuilder::rsyncd_ipaddress: "%{hiera('swift_rsyncd_ipaddress')}"
@@ -451,6 +530,7 @@ cloud::object::storage::fstype: "%{hiera('swift_fstype')}"
 cloud::object::storage::device_config_hash: "%{hiera('swift_device_config_hash')}"
 cloud::object::storage::ring_container_device: "%{hiera('swift_ring_container_device')}"
 cloud::object::storage::ring_account_device: "%{hiera('swift_ring_account_device')}"
+cloud::object::storage::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 #
 # cloud::orchestration
@@ -480,6 +560,7 @@ cloud::orchestration::api::ks_heat_cfn_internal_port: "%{hiera('heat_cfn_port')}
 cloud::orchestration::api::ks_heat_cloudwatch_internal_port: "%{hiera('heat_cloudwatch_port')}"
 cloud::orchestration::api::api_eth: "%{hiera('internal_netif_ip')}"
 cloud::orchestration::api::workers: "%{hiera('heat_workers')}"
+cloud::orchestration::api::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 cloud::orchestration::engine::enabled: "%{hiera('heat_engine_enabled')}"
 cloud::orchestration::engine::ks_heat_public_host: "%{hiera('ks_heat_public_host')}"
@@ -496,6 +577,7 @@ cloud::spof::cluster_ip: "%{hiera('spof_cluster_ip')}"
 cloud::spof::cluster_members: "%{hiera('spof_cluster_members')}"
 cloud::spof::multicast_address: "%{hiera('spof_multicast_address')}"
 cloud::spof::cluster_password: "%{hiera('spof_cluster_password')}"
+cloud::spof::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 #
 # cloud::telemetry
@@ -520,8 +602,10 @@ cloud::telemetry::api::ks_ceilometer_internal_port: "%{hiera('ceilometer_port')}
 cloud::telemetry::api::ks_ceilometer_password: "%{hiera('ks_ceilometer_password')}"
 cloud::telemetry::api::api_eth: "%{hiera('api_eth')}"
 cloud::telemetry::api::mongo_nodes: "%{hiera('mongo_nodes')}"
+cloud::telemetry::api::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 cloud::telemetry::centralagent::enabled: "%{hiera('ceilometer_centralagent_enabled')}"
+cloud::telemetry::centralagent::coordination_url: "%{hiera('ceilometer_coordination_url')}"
 
 cloud::telemetry::collector::mongo_nodes: "%{hiera('mongo_nodes')}"
 cloud::telemetry::collector::replicaset_enabled: "%{hiera('replicatset_enabled')}"
@@ -550,6 +634,10 @@ cloud::volume::api::ks_glance_api_internal_port: "%{hiera('glance_api_port')}"
 cloud::volume::api::api_eth: "%{hiera('internal_netif_ip')}"
 cloud::volume::api::ks_glance_internal_proto: "%{hiera('ks_glance_api_internal_proto')}"
 cloud::volume::api::default_volume_type: "%{hiera('volume_default_volume_type')}"
+cloud::volume::api::firewall_settings: "%{hiera('firewall_common_extras')}"
+cloud::volume::api::volume_multi_backend: "%{hiera('cinder_multi_backend')}"
+
+cloud::volume::scheduler::volume_multi_backend: "%{hiera('cinder_multi_backend')}"
 
 cloud::volume::backup::backup_ceph_pool: "%{hiera('backup_ceph_pool')}"
 cloud::volume::backup::backup_ceph_user: "%{hiera('backup_ceph_user')}"
@@ -569,51 +657,58 @@ cloud::volume::nova_endpoint_type: "%{hiera('nova_endpoint_type')}"
 #
 # cloud::database
 #
-cloud::database::sql::api_eth: "%{hiera('internal_netif_ip')}"
-cloud::database::sql::service_provider: "%{hiera('service_provider')}"
-cloud::database::sql::galera_master_name: "%{hiera('galera_master_name')}"
-cloud::database::sql::galera_internal_ips: "%{hiera('galera_internal_ips')}"
-cloud::database::sql::galera_gcache: "%{hiera('galera_gcache')}"
-cloud::database::sql::keystone_db_host: "%{hiera('keystone_db_host')}"
-cloud::database::sql::keystone_db_user: "%{hiera('keystone_db_user')}"
-cloud::database::sql::keystone_db_password: "%{hiera('keystone_db_password')}"
-cloud::database::sql::keystone_db_allowed_hosts: "%{hiera('keystone_db_allowed_hosts')}"
-cloud::database::sql::cinder_db_host: "%{hiera('cinder_db_host')}"
-cloud::database::sql::cinder_db_user: "%{hiera('cinder_db_user')}"
-cloud::database::sql::cinder_db_password: "%{hiera('cinder_db_password')}"
-cloud::database::sql::cinder_db_allowed_hosts: "%{hiera('cinder_db_allowed_hosts')}"
-cloud::database::sql::glance_db_host: "%{hiera('glance_db_host')}"
-cloud::database::sql::glance_db_user: "%{hiera('glance_db_user')}"
-cloud::database::sql::glance_db_password: "%{hiera('glance_db_password')}"
-cloud::database::sql::glance_db_allowed_hosts: "%{hiera('glance_db_allowed_hosts')}"
-cloud::database::sql::heat_db_host: "%{hiera('heat_db_host')}"
-cloud::database::sql::heat_db_user: "%{hiera('heat_db_user')}"
-cloud::database::sql::heat_db_password: "%{hiera('heat_db_password')}"
-cloud::database::sql::heat_db_allowed_hosts: "%{hiera('heat_db_allowed_hosts')}"
-cloud::database::sql::nova_db_host: "%{hiera('nova_db_host')}"
-cloud::database::sql::nova_db_user: "%{hiera('nova_db_user')}"
-cloud::database::sql::nova_db_password: "%{hiera('nova_db_password')}"
-cloud::database::sql::nova_db_allowed_hosts: "%{hiera('nova_db_allowed_hosts')}"
-cloud::database::sql::neutron_db_host: "%{hiera('neutron_db_host')}"
-cloud::database::sql::neutron_db_user: "%{hiera('neutron_db_user')}"
-cloud::database::sql::neutron_db_password: "%{hiera('neutron_db_password')}"
-cloud::database::sql::neutron_db_allowed_hosts: "%{hiera('neutron_db_allowed_hosts')}"
-cloud::database::sql::trove_db_host: "%{hiera('trove_db_host')}"
-cloud::database::sql::trove_db_user: "%{hiera('trove_db_user')}"
-cloud::database::sql::trove_db_password: "%{hiera('trove_db_password')}"
-cloud::database::sql::trove_db_allowed_hosts: "%{hiera('trove_db_allowed_hosts')}"
-cloud::database::sql::mysql_root_password: "%{hiera('mysql_root_password')}"
-cloud::database::sql::mysql_sys_maint_password: "%{hiera('mysql_sys_maint_password')}"
-cloud::database::sql::galera_clustercheck_dbuser: "%{hiera('galera_clustercheck_dbuser')}"
-cloud::database::sql::galera_clustercheck_dbpassword: "%{hiera('galera_clustercheck_dbpassword')}"
-cloud::database::sql::galera_clustercheck_ipaddress: "%{hiera('galera_clustercheck_ipaddress')}"
+cloud::database::sql::mysql::api_eth: "%{hiera('internal_netif_ip')}"
+cloud::database::sql::mysql::galera_master_name: "%{hiera('galera_master_name')}"
+cloud::database::sql::mysql::galera_internal_ips: "%{hiera('galera_internal_ips')}"
+cloud::database::sql::mysql::galera_gcache: "%{hiera('galera_gcache')}"
+cloud::database::sql::mysql::keystone_db_host: "%{hiera('keystone_db_host')}"
+cloud::database::sql::mysql::keystone_db_user: "%{hiera('keystone_db_user')}"
+cloud::database::sql::mysql::keystone_db_password: "%{hiera('keystone_db_password')}"
+cloud::database::sql::mysql::keystone_db_allowed_hosts: "%{hiera('keystone_db_allowed_hosts')}"
+cloud::database::sql::mysql::cinder_db_host: "%{hiera('cinder_db_host')}"
+cloud::database::sql::mysql::cinder_db_user: "%{hiera('cinder_db_user')}"
+cloud::database::sql::mysql::cinder_db_password: "%{hiera('cinder_db_password')}"
+cloud::database::sql::mysql::cinder_db_allowed_hosts: "%{hiera('cinder_db_allowed_hosts')}"
+cloud::database::sql::mysql::glance_db_host: "%{hiera('glance_db_host')}"
+cloud::database::sql::mysql::glance_db_user: "%{hiera('glance_db_user')}"
+cloud::database::sql::mysql::glance_db_password: "%{hiera('glance_db_password')}"
+cloud::database::sql::mysql::glance_db_allowed_hosts: "%{hiera('glance_db_allowed_hosts')}"
+cloud::database::sql::mysql::heat_db_host: "%{hiera('heat_db_host')}"
+cloud::database::sql::mysql::heat_db_user: "%{hiera('heat_db_user')}"
+cloud::database::sql::mysql::heat_db_password: "%{hiera('heat_db_password')}"
+cloud::database::sql::mysql::heat_db_allowed_hosts: "%{hiera('heat_db_allowed_hosts')}"
+cloud::database::sql::mysql::nova_db_host: "%{hiera('nova_db_host')}"
+cloud::database::sql::mysql::nova_db_user: "%{hiera('nova_db_user')}"
+cloud::database::sql::mysql::nova_db_password: "%{hiera('nova_db_password')}"
+cloud::database::sql::mysql::nova_db_allowed_hosts: "%{hiera('nova_db_allowed_hosts')}"
+cloud::database::sql::mysql::neutron_db_host: "%{hiera('neutron_db_host')}"
+cloud::database::sql::mysql::neutron_db_user: "%{hiera('neutron_db_user')}"
+cloud::database::sql::mysql::neutron_db_password: "%{hiera('neutron_db_password')}"
+cloud::database::sql::mysql::neutron_db_allowed_hosts: "%{hiera('neutron_db_allowed_hosts')}"
+cloud::database::sql::mysql::trove_db_host: "%{hiera('trove_db_host')}"
+cloud::database::sql::mysql::trove_db_user: "%{hiera('trove_db_user')}"
+cloud::database::sql::mysql::trove_db_password: "%{hiera('trove_db_password')}"
+cloud::database::sql::mysql::trove_db_allowed_hosts: "%{hiera('trove_db_allowed_hosts')}"
+cloud::database::sql::mysql::mysql_root_password: "%{hiera('mysql_root_password')}"
+cloud::database::sql::mysql::mysql_sys_maint_password: "%{hiera('mysql_sys_maint_password')}"
+cloud::database::sql::mysql::galera_clustercheck_dbuser: "%{hiera('galera_clustercheck_dbuser')}"
+cloud::database::sql::mysql::galera_clustercheck_dbpassword: "%{hiera('galera_clustercheck_dbpassword')}"
+cloud::database::sql::mysql::galera_clustercheck_ipaddress: "%{hiera('galera_clustercheck_ipaddress')}"
+cloud::database::sql::mysql::firewall_settings: "%{hiera('firewall_common_extras')}"
 
-cloud::database::nosql::bind_ip: "%{hiera('internal_netif_ip')}"
-cloud::database::nosql::nojournal: "%{hiera('mongo_nojournal')}"
-cloud::database::nosql::replset_members: "%{hiera('mongo_replset_members')}"
+cloud::database::nosql::mongodb::mongod::enable: "%{hiera('mongod_enable')}"
+cloud::database::nosql::mongodb::mongod::replset: "%{hiera('mongod_replset')}"
+cloud::database::nosql::mongodb::mongod::mongod_port: "%{hiera('mongod_fw_port')}"
+cloud::database::nosql::mongodb::mongod::firewall_settings: "%{hiera('firewall_common_extras')}"
+
+cloud::database::nosql::mongodb::mongos::enable: "%{hiera('mongos_enable')}"
+cloud::database::nosql::mongodb::mongos::shards: "%{hiera('mongos_shards')}"
+cloud::database::nosql::mongodb::mongos::mongos_port: "%{hiera('mongos_fw_port')}"
+cloud::database::nosql::mongodb::mongos::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 cloud::database::dbaas::nova_admin_password: "%{hiera('ks_nova_password')}"
 cloud::database::dbaas::api::ks_trove_password: "%{hiera('ks_trove_password')}"
+cloud::database::dbaas::api::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 #
 # cloud::storage
@@ -625,10 +720,12 @@ cloud::storage::rbd::public_network: "%{hiera('ceph_public_network')}"
 cloud::storage::rbd::osd::devices: "%{hiera('ceph_osd_devices')}"
 cloud::storage::rbd::osd::public_address: "%{hiera('ceph_osd_public_address')}"
 cloud::storage::rbd::osd::cluster_address: "%{hiera('ceph_osd_cluster_address')}"
+cloud::storage::rbd::osd::firewall_settings: "%{hiera('firewall_common_extras')}"
 
 cloud::storage::rbd::monitor::id: "%{hiera('ceph_monitor_id')}"
 cloud::storage::rbd::monitor::mon_addr: "%{hiera('internal_netif_ip')}"
 cloud::storage::rbd::monitor::monitor_secret: "%{hiera('ceph_mon_secret')}"
+cloud::storage::rbd::monitor::firewall_settings: "%{hiera('firewall_common_extras')}"
 # Need to be set per node
 # cloud::storage::rbd::key::enabled:
 
@@ -646,6 +743,9 @@ cloud::storage::rbd::pools::ceph_fsid: "%{hiera('ceph_fsid')}"
 #
 # cloud::logging
 #
+cloud::logging::server::kibana_port: "%{hiera('kibana3::ws_port')}"
+cloud::logging::server::kibana_bind_ip: "%{hiera('kibana_bind_ip')}"
+cloud::logging::server::firewall_settings: "%{hiera('firewall_common_extras')}"
 cloud::logging::agent::syslog_enable: "%{hiera('logging_syslog_enable')}"
 cloud::logging::agent::sources: "%{hiera('logging_sources')}"
 cloud::logging::agent::matches: "%{hiera('logging_matches')}"
@@ -662,6 +762,13 @@ cloud::monitoring::server::sensu::rabbitmq_user: "%{hiera('sensu_rabbitmq_user')
 cloud::monitoring::server::sensu::rabbitmq_password: "%{hiera('sensu_rabbitmq_password')}"
 cloud::monitoring::server::sensu::rabbitmq_vhost: "%{hiera('sensu_rabbitmq_vhost')}"
 cloud::monitoring::server::sensu::uchiwa_ip: "%{hiera('sensu_uchiwa_ip')}"
+uchiwa::install_repo: "%{hiera('sensu_uchiwa_install_repo')}"
+uchiwa::user: "%{hiera('sensu_uchiwa_user')}"
+uchiwa::pass: "%{hiera('sensu_uchiwa_password')}"
+sensu::rabbitmq_password: "%{hiera('sensu_rabbitmq_password')}"
+sensu::rabbitmq_host: "%{hiera('rabbit_host')}"
+sensu::rabbitmq_vhost: "%{hiera('sensu_rabbitmq_vhost')}"
+sensu::install_repo: "%{hiera('sensu_install_repo')}"
 
 # Experimental
 # cloud::database::dbaas::trove_db_host: "%{hiera('trove_db_host')}"
@@ -706,75 +813,7 @@ cloud::monitoring::server::sensu::uchiwa_ip: "%{hiera('sensu_uchiwa_ip')}"
 # They are put here so the sync_parameter script doesn't complain
 #
 #
-
-# cloud::image
-
-# cloud::image::glance_db_host:
-# cloud::image::glance_db_user:
-# cloud::image::glance_db_password:
-# cloud::image::ks_keystone_internal_host:
-# cloud::image::ks_glance_internal_host:
-# cloud::image::ks_glance_api_internal_port:
-# cloud::image::ks_glance_registry_internal_port:
-# cloud::image::ks_glance_password:
-# cloud::image::rabbit_password:
-# cloud::image::rabbit_host:
-# cloud::image::api_eth:
-# cloud::image::openstack_vip:
-# cloud::image::glance_rbd_pool:
-# cloud::image::glance_rbd_user:
-# cloud::image::verbose:
-# cloud::image::debug:
-# cloud::image::log_facility:
-# cloud::image::use_syslog:
-
-# cloud::compute
-
-# cloud::compute::scheduler::scheduler_default_filters:
-# cloud::compute::controller::ks_keystone_internal_host:
-# cloud::compute::controller::ks_nova_password:
-# cloud::compute::controller::neutron_metadata_proxy_shared_secret:
-# cloud::compute::controller::api_eth:
-# cloud::compute::controller::spice_port:
-# cloud::compute::controller::ks_nova_public_port:
-# cloud::compute::controller::ks_ec2_public_port:
-# cloud::compute::controller::ks_metadata_public_port:
-
-# cloud::telemetry
-
-# cloud::telemetry::server::ks_keystone_internal_host:
-# cloud::telemetry::server::ks_keystone_internal_proto:
-# cloud::telemetry::server::ks_ceilometer_internal_port:
-# cloud::telemetry::server::ks_ceilometer_password:
-# cloud::telemetry::server::api_eth:
-# cloud::telemetry::server::mongo_nodes:
-
-# cloud::volume
-
-# cloud::volume::controller::ks_cinder_internal_port:
-# cloud::volume::controller::ks_cinder_password:
-# cloud::volume::controller::ks_keystone_internal_host:
-# cloud::volume::controller::ks_keystone_internal_proto:
-# cloud::volume::controller::ks_glance_internal_host:
-# cloud::volume::controller::ks_glance_api_internal_port:
-# cloud::volume::controller::api_eth:
-# cloud::volume::controller::default_volume_type:
-# cloud::volume::controller::volume_multi_backend:
-
-# cloud::volume::storage::glance_api_version:
-# cloud::volume::scheduler::volume_multi_backend:
-# cloud::volume::api::volume_multi_backend:
-
-# cloud::loadbalancer
-
-# cloud::loadbalancer::keepalived_interface:
-# cloud::loadbalancer::keepalived_ipvs:
-
-# cloud::network
-
-# cloud::network::external_int:
-# cloud::network::external_bridge:
-# cloud::network::manage_ext_network:
-# cloud::network::tunnel_types:
-# cloud::network::tunnel_eth:
-# cloud::network::provider_bridge_mappings:
+# Need to be ignored
+# cloud::firewall::pre::firewall_settings:
+# cloud::firewall::post::log:
+# cloud::firewall::post::firewall_settings:

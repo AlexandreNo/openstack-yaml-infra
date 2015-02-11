@@ -1,18 +1,25 @@
-cloud::root_password: "%{hiera('root_password')}"
-cloud::site_domain: "%{hiera('site_domain')}"
-cloud::dns_ips: "%{hiera('dns_ips')}"
-ntp::servers: "%{hiera('ntp_servers')}"
-
 # root / enovance
 root_password: {{ config.root_password }}
 
 # Set of common configuration value
-#
+
+# SELinux
+selinux: {{ config.selinux | default('permissive') }}
+selinux_directory: {{ config.selinux_directory }}
+selinux_booleans: {{ config.selinux_booleans | default([]) }}
+selinux_modules: {{ config.selinux_modules | default([]) }}
+
+# Firewalling
+manage_firewall: {{ config.manage_firewall | default('false') }}
+firewall_rules: {{ config.firewall_rules | default({}) }}
+purge_firewall_rules: {{ config.purge_firewall_rules | default('false') }}
+firewall_pre_extras: {{ config.firewall_pre_extras | default({}) }}
+firewall_post_extras: {{ config.firewall_post_extras | default({}) }}
+firewall_common_extras: {{ config.firewall_common_extras | default({}) }}
+firewall_debug: {{ config.firewall_debug | default('false') }}
 
 # Endpoints Protocols & Types
 
-# DEPRECATED: @@VERSION@@
-endpoint_proto: {{ config.endpoint_proto | default('https') }}
 endpoint_protocol: {{ config.endpoint_protocol | default('https') }}
 endpoint_public_protocol: {{ config.endpoint_public_protocol | default('"%{hiera(\'endpoint_protocol\')}"') }}
 endpoint_internal_protocol: {{ config.endpoint_internal_protocol | default('"%{hiera(\'endpoint_protocol\')}"') }}
@@ -40,7 +47,7 @@ rhn_registration:
 {% for server, params in config.rhn_registration.iteritems() %}
   {{ server }}:
   {% for key, value in params.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -53,12 +60,13 @@ region: {{ config.region }}
 dns_ips: {{ config.dns_ips }}
 
 {% if config.ntp_servers %}
-ntp_servers:
+ntp::servers:
 {% for server in config.ntp_servers %}  - {{ server }}
 {% endfor %}
 {% endif %}
 
 vip_public_ip: {{ config.vip_public_ip }}
+vip_monitor_ip: {{ config.vip_monitor_ip  | default('"%{hiera(\'vip_public_ip\')}"') }}
 vip_admin_ip: {{ config.vip_admin_ip  | default('"%{hiera(\'vip_public_ip\')}"') }}
 vip_internal_ip: {{ config.vip_internal_ip | default('"%{hiera(\'vip_public_ip\')}"') }}
 
@@ -93,20 +101,8 @@ keepalived_state: {{ config.keepalived_state | default('BACKUP') }}
 keepalived_priority: {{ config.keepalived_priority | default('50') }}
 keepalived_public_interface: {{ config.keepalived_public_interface | default('eth0') }}
 keepalived_internal_interface: {{ config.keepalived_internal_interface | default('eth0') }}
-{% if config.keepalived_public_ipvs %}
-keepalived_public_ipvs:
-{% for host in config.keepalived_public_ipvs %}  - {{ host }}
-{% endfor %}
-{% else %}
-keepalived_public_ipvs: "%{hiera('vip_public_ip')}"
-{% endif %}
-{% if config.keepalived_internal_ipvs %}
-keepalived_internal_ipvs:
-{% for host in config.keepalived_internal_ipvs %}  - {{ host }}
-{% endfor %}
-{% else %}
-keepalived_internal_ipvs: "%{hiera('vip_internal_ip')}"
-{% endif %}
+keepalived_public_ipvs: {{ config.keepalived_public_ipvs | default('"%{hiera(\'vip_public_ip\')}"') }}
+keepalived_internal_ipvs: {{ config.keepalived_internal_ipvs | default('"%{hiera(\'vip_internal_ip\')}"') }}
 
 {% if config.mgmt_names %}
 mgmt_names:
@@ -138,35 +134,43 @@ spof_multicast_address: {{ config.spof_multicast_address | default('239.1.1.2') 
 spof_cluster_password: {{ config.spof_cluster_password | default('secrete') }}
 
 # MongoDB
-{% if config.mongo_nodes %}
-mongo_nodes:
-{% for host in config.mongo_nodes %}  - {{ host }}
-{% endfor %}
-{% else %}
-mongo_nodes: "%{hiera('mgmt_internal_ips')}"
-{% endif %}
-mongo_nojournal: {{ config.mongo_nojournal | default('false') }}
+mongod_enable: {{ config.mongod_enable | default('true') }}
+mongos_enable: {{ config.mongos_enable | default('false') }}
+
+mongod_fw_port: {{ config.mongod_fw_port | default('27017') }}
+mongos_fw_port: {{ config.mongos_fw_port | default('27017') }}
+
+mongod_replset:
+  ceilometer:
+    members:
 {% if config.mongo_replset_members %}
-mongo_replset_members:
-{% for host in config.mongo_replset_members %}  - {{ host }}
+{% for host in config.mongo_replset_members %}      - {{ host }}
 {% endfor %}
 {% else %}
-mongo_replset_members:
-  - "%{::hostname}"
+      - "%{::hostname}"
 {% endif %}
+
+mongos_shards: {{ config.mongos_shards | default({}) }}
+
+mongo_nodes: {{ config.mongo_nodes | default('"%{hiera(\'mgmt_internal_ips\')}"') }}
 replicatset_enabled: {{ config.replicatset_enabled | default('true') }}
+
+mongodb::globals::version: {{ config.mongodb_version | default('2.6.5-2.el7ost') }}
+mongodb::globals::manage_package_repo: {{ config.mongodb_manage_repo | default('false') }}
+mongodb::server::bind_ip: {{ config.mongod_bindip | default('"%{hiera(\'internal_netif_ip\')}"') }}
+mongodb::server::nojournal: {{ config.mongo_nojournal | default('false') }}
+mongodb::server::replset: {{ config.mongodb_replset | default('ceilometer') }}
+mongodb::server::logpath: {{ config.mongodb_logpath | default('/var/log/mongodb/mongod.log') }}
+
+# Redis
+redis_port: {{ config.redis_port | default('6379') }}
+sentinel_port: {{ config.sentinel_port | default('26379') }}
 
 
 # MySQL
 galera_ip: {{ config.galera_ip | default('"%{hiera(\'vip_internal_ip\')}"') }}
 galera_master_name: {{ config.galera_master_name }}
-{% if config.galera_internal_ips %}
-galera_internal_ips:
-{% for host in config.galera_internal_ips %}  - {{ host }}
-{% endfor %}
-{% else %}
-galera_internal_ips: "%{hiera('mgmt_internal_ips')}"
-{% endif %}
+galera_internal_ips: {{ config.galera_internal_ips | default('"%{hiera(\'mgmt_internal_ips\')}"') }}
 mysql_root_password: {{ config.mysql_root_password }}
 mysql_sys_maint_password: {{ config.mysql_sys_maint_password | default('sys_maint') }}
 galera_clustercheck_ipaddress: "%{hiera('internal_netif_ip')}"
@@ -174,28 +178,15 @@ galera_clustercheck_dbuser: {{ config.galera_clustercheck_dbuser | default ('clu
 galera_clustercheck_dbpassword: {{ config.galera_clustercheck_dbpassword | default ('clustercheckpassword') }}
 galera_gcache: {{ config.galera_gcache | default('1G') }}
 galera_slave: {{ config.galera_slave | default('false') }}
-service_provider: {{ config.service_provider | default('sysv') }}
-{% if config.galera_bind_options %}
-galera_bind_options:
-{% for bind_option in config.galera_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-galera_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+galera_bind_options: {{ config.galera_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 # Messaging
 # Useful when we need a single Rabbit host (like Sensu needs)
 # rabbit_hosts: defined in site.pp
-{% if config.rabbit_names %}
-rabbit_names:
-{% for host in config.rabbit_names %}  - {{ host }}
-{% endfor %}
-{% else %}
-rabbit_names: "%{hiera('mgmt_names')}"
-{% endif %}
+rabbit_names: {{ config.rabbit_names | default('"%{hiera(\'mgmt_names\')}"') }}
 rabbit_host: {{ config.rabbit_host }}
-{% if config.rabbit_hosts %}
 rabbit_hosts:
+{% if config.rabbit_hosts %}
 {% for host in config.rabbit_hosts %}  - {{ host }}
 {% endfor %}
 {% else %}
@@ -205,15 +196,10 @@ rabbit_hosts:
 rabbit_password: {{ config.rabbit_password | default('rabbitpassword') }}
 rabbit_cluster_node_type: {{ config.cluster_node_type | default('disc') }}
 rabbit_port: {{ config.rabbit_port | default('5672') }}
-rabbit_ip: {{ config.rabbit_ip | default('"%{::ipaddress}"') }}
+rabbit_ip: '{{ config.rabbit_ip | default('"%{::ipaddress}"') }}'
 rabbit: {{ config.rabbit | default('false') }}
-{% if config.rabbit_bind_options %}
-rabbit_bind_options:
-{% for bind_option in config.rabbit_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-rabbit_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+rabbit_bind_options: {{ config.rabbit_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+erlang_cookie: {{ config.erlang_cookie }}
 
 # Memcache
 {% if config.memcache_servers %}
@@ -229,13 +215,7 @@ memcache_servers:
 # Horizon
 horizon_debug: {{ config.horizon_debug | default('false') }}
 
-{% if config.horizon_bind_options %}
-horizon_bind_options:
-{% for bind_option in config.horizon_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-horizon_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+horizon_bind_options: {{ config.horizon_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 horizon_ssl_bind_options: {{ config.horizon_ssl_bind_options | default ('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 secret_key: {{ config.secret_key | default('secrete') }}
@@ -250,32 +230,21 @@ horizon_cert: {{ config.horizon_cert | default('') }}
 horizon_key: {{ config.horizon_key | default('') }}
 horizon_ca: {{ config.horizon_ca | default('') }}
 horizon_ssl_forward: {{ config.horizon_ssl_forward | default('false') }}
-horizon_listen_ssl: {{ config.horizon_listen_ssl | default('false') }}
 horizon_endpoint_type: {{ config.horizon_endpoint_type | default('"%{hiera(\'endpoint_type\')}"') }}
-{% if config.horizon_allowed_hosts %}
 horizon_allowed_hosts:
-  - "%{hiera(\'vip_internal_ip\')}"
-{% for allowed_host in config.horizon_allowed_hosts %}  - {{ allowed_host }}
-{% endfor %}
-{% else %}
-horizon_allowed_hosts:
-  - "%{hiera(\'vip_internal_ip\')}"
-{% endif %}
+  - "%{hiera('vip_public_fqdn')}"
+horizon_vhost_extra_params: {{ config.horizon_vhost_extra_params | default({}) }}
+horizon_neutron_extra_options: {{ config.horizon_neutron_extra_options | default({}) }}
 
 # Cinder
+cinder_enabled: {{ config.cinder_enabled | default('true') }}
 cinder_verbose: {{ config.cinder_verbose | default('"%{hiera(\'verbose\')}"') }}
 cinder_debug: {{ config.cinder_debug | default('"%{hiera(\'debug\')}"') }}
 cinder_use_syslog: {{ config.cinder_use_syslog | default('"%{hiera(\'use_syslog\')}"') }}
 cinder_log_facility: {{ config.cinder_log_facility | default('"%{hiera(\'log_facility\')}"') }}
 
 cinder_api: {{ config.cinder_api | default('true') }}
-{% if config.cinder_bind_options %}
-cinder_bind_options:
-{% for bind_option in config.cinder_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-cinder_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+cinder_bind_options: {{ config.cinder_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 cinder_port: {{ config.cinder_port | default('8776') }}
 
@@ -296,18 +265,13 @@ ks_cinder_public_host: {{ config.cinder_public_host | default('"%{hiera(\'vip_pu
 ks_cinder_public_proto: {{ config.cinder_public_proto | default('"%{hiera(\'endpoint_public_protocol\')}"') }}
 ks_cinder_password: {{ config.ks_cinder_password | default('cinderpassword') }}
 
-{% if config.cinder_db_allowed_hosts %}
-cinder_db_allowed_hosts:
-{% for db_allowed_host in config.cinder_db_allowed_hosts %}  - {{ db_allowed_host }}
-{% endfor %}
-{% else %}
-cinder_db_allowed_hosts: "%{hiera('db_allowed_hosts')}"
-{% endif %}
+cinder_db_allowed_hosts: {{ config.cinder_db_allowed_hosts | default('"%{hiera(\'db_allowed_hosts\')}"') }}
 cinder_db_host: {{ config.cinder_db_host | default('"%{hiera(\'galera_ip\')}"') }}
 cinder_db_user: {{ config.cinder_db_user | default('cinder') }}
 cinder_db_password: {{ config.cinder_db_password | default('cinderpassword') }}
 
 cinder_endpoint_type: {{ config.cinder_endpoint_type | default('"%{hiera(\'endpoint_type\')}"') }}
+cinder_multi_backend: {{ config.cinder_multi_backend | default('true') }}
 {% if config.volume_cinder_backends %}
 volume_cinder_backends:
 {% for backend, desc in config.volume_cinder_backends.iteritems() %}
@@ -315,7 +279,7 @@ volume_cinder_backends:
   {% for type, spec in desc.iteritems() %}
     {{ type }}:
     {% for key, value in spec.iteritems() %}
-      {{ key }}: {{ value }}
+      {{ key }}: '{{ value }}'
     {% endfor %}
   {% endfor %}
 {% endfor %}
@@ -332,27 +296,9 @@ heat_log_facility: {{ config.heat_log_facility | default('"%{hiera(\'log_facilit
 heat_api: {{ config.heat_api | default('true') }}
 heat_cfn_api: {{ config.heat_cfn_api | default('true') }}
 heat_cloudwatch_api: {{ config.heat_cloudwatch_api | default('true') }}
-{% if config.heat_api_bind_options %}
-heat_api_bind_options:
-{% for bind_option in config.heat_api_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-heat_api_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
-{% if config.heat_cfn_bind_options %}
-heat_cfn_bind_options:
-{% for bind_option in config.heat_cfn_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-heat_cfn_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
-{% if config.heat_cloudwatch_bind_options %}
-heat_cloudwatch_bind_options:
-{% for bind_option in config.heat_cloudwatch_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-heat_cloudwatch_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+heat_api_bind_options: {{ config.heat_api_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+heat_cfn_bind_options: {{ config.heat_cfn_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+heat_cloudwatch_bind_options: {{ config.heat_cloudwatch_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 heat_port: {{ config.heat_port | default('8004') }}
 heat_cfn_port: {{ config.heat_cfn_port | default('8000') }}
@@ -366,13 +312,7 @@ ks_heat_public_host: {{ config.heat_public_host | default('"%{hiera(\'vip_public
 ks_heat_public_proto: {{ config.heat_public_proto | default('"%{hiera(\'endpoint_public_protocol\')}"') }}
 ks_heat_password: {{ config.ks_heat_password | default('heatpassword') }}
 
-{% if config.heat_db_allowed_hosts %}
-heat_db_allowed_hosts:
-{% for db_allowed_host in config.heat_db_allowed_hosts %}  - {{ db_allowed_host }}
-{% endfor %}
-{% else %}
-heat_db_allowed_hosts: "%{hiera('db_allowed_hosts')}"
-{% endif %}
+heat_db_allowed_hosts: {{ config.heat_db_allowed_hosts | default('"%{hiera(\'db_allowed_hosts\')}"') }}
 heat_db_host: {{ config.heat_db_host | default('"%{hiera(\'galera_ip\')}"') }}
 heat_db_user: {{ config.heat_db_user | default('heat') }}
 heat_db_password: {{ config.heat_db_password | default('heatpassword') }}
@@ -390,6 +330,7 @@ glance_api_verbose: {{ config.glance_api_verbose | default('"%{hiera(\'verbose\'
 glance_api_debug: {{ config.glance_api_debug | default('"%{hiera(\'debug\')}"') }}
 glance_api_use_syslog: {{ config.glance_api_use_syslog | default('"%{hiera(\'use_syslog\')}"') }}
 glance_api_log_facility: {{ config.glance_api_log_facility | default('"%{hiera(\'log_facility\')}"') }}
+glance_api_policies: {{ config.glance_api_policies | default('false') }}
 
 glance_registry_verbose: {{ config.glance_registry_verbose | default('"%{hiera(\'verbose\')}"') }}
 glance_registry_debug: {{ config.glance_registry_debug | default('"%{hiera(\'debug\')}"') }}
@@ -400,24 +341,21 @@ glance_api: {{ config.glance_api | default('true') }}
 glance_registry: {{ config.glance_registry | default('true') }}
 glance_api_bind_options: {{ config.glance_api_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 glance_registry_bind_options: {{ config.glance_registry_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
-{% if config.glance_api_bind_options %}
-glance_api_bind_options:
-{% for bind_option in config.glance_api_bind_options %} - {{ bind_option }}
-{% endfor %}
+
+{% if config.glance_known_stores %}
+glance_known_stores: {{ config.glance_known_stores }}
 {% else %}
-glance_api_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
-{% if config.glance_registry_bind_options %}
-glance_registry_bind_options:
-{% for bind_option in config.glance_registry_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-glance_registry_bind_options: "%{hiera('haproxy_default_bind_options')}"
+glance_known_stores:
+  - rbd
 {% endif %}
 
 glance_backend: {{ config.glance_backend | default('rbd') }}
 glance_rbd_pool: {{ config.glance_rbd_pool | default('images') }}
 glance_rbd_user: {{ config.glance_rbd_user | default('glance') }}
+
+glance_nfs_device: {{ config.glance_nfs_device | default('false') }}
+glance_nfs_options: {{ config.glance_nfs_options | default('defaults') }}
+glance_api_pipeline: {{ config.glance_api_pipeline | default('keystone') }}
 
 glance_filesystem_store_datadir: {{ config.glance_filesystem_store_datadir | default('/var/lib/glance/images/') }}
 
@@ -441,13 +379,7 @@ ks_glance_registry_public_proto: {{ config.glance_registry_public_proto | defaul
 
 ks_glance_password: {{ config.ks_glance_password | default('glancepassword') }}
 
-{% if config.glance_db_allowed_hosts %}
-glance_db_allowed_hosts:
-{% for db_allowed_host in config.glance_db_allowed_hosts %}  - {{ db_allowed_host }}
-{% endfor %}
-{% else %}
-glance_db_allowed_hosts: "%{hiera('db_allowed_hosts')}"
-{% endif %}
+glance_db_allowed_hosts: {{ config.glance_db_allowed_hosts | default('"%{hiera(\'db_allowed_hosts\')}"') }}
 glance_db_host: {{ config.glance_db_host | default('"%{hiera(\'galera_ip\')}"') }}
 glance_db_user: {{ config.glance_db_user | default('glance') }}
 glance_db_password: {{ config.glance_db_password | default('glancepassword') }}
@@ -460,13 +392,7 @@ ceilometer_log_facility: {{ config.ceilometer_log_facility | default('"%{hiera(\
 
 ceilometer_api: {{ config.ceilometer_api | default('true') }}
 ceilometer_centralagent_enabled: {{ config.ceilometer_centralagent_enabled | default('true') }}
-{% if config.ceilometer_bind_options %}
-ceilometer_bind_options:
-{% for bind_option in config.ceilometer_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-ceilometer_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+ceilometer_bind_options: {{ config.ceilometer_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 ceilometer_endpoint_type: {{ config.ceilometer_endpoint_type | default('"%{hiera(\'endpoint_type\')}"') }}
 
 ceilometer_port: {{ config.ceilometer_port | default('8777') }}
@@ -479,10 +405,11 @@ ks_ceilometer_public_host: {{ config.ceilometer_public_host | default('"%{hiera(
 ks_ceilometer_public_proto: {{ config.ceilometer_public_proto | default('"%{hiera(\'endpoint_public_protocol\')}"') }}
 ks_ceilometer_password: {{ config.ks_ceilometer_password | default('ceilometerpassword') }}
 
-ceilometer_endpoint_type: {{ config.ceilometer_endpoint_type | default('"%{hiera(\'endpoint_type\')}"') }}
-
 ceilometer_secret: {{ config.ceilometer_secret | default('ceilometersecret') }}
 
+{% if config.ceilometer_coordination_url %}
+ceilometer_coordination_url: {{ config.ceilometer_coordination_url }}
+{% endif %}
 
 # Ceph
 ceph_public_network: "%{hiera('public_network')}"
@@ -517,33 +444,15 @@ backup_ceph_user: {{ config.backup_ceph_user | default('cinder') }}
 # Keystone
 keystone_api: {{ config.keystone_api | default('true') }}
 keystone_admin_api: {{ config.keystone_admin_api | default('true') }}
-{% if config.keystone_bind_options %}
-keystone_bind_options:
-{% for bind_option in config.keystone_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-keystone_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
-{% if config.keystone_admin_bind_options %}
-keystone_admin_bind_options:
-{% for bind_option in config.keystone_admin_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-keystone_admin_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+keystone_bind_options: {{ config.keystone_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+keystone_admin_bind_options: {{ config.keystone_admin_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 keystone_verbose: {{ config.keystone_verbose | default('"%{hiera(\'verbose\')}"') }}
 keystone_debug: {{ config.keystone_debug | default('"%{hiera(\'debug\')}"') }}
 keystone_use_syslog: {{ config.keystone_use_syslog | default('"%{hiera(\'use_syslog\')}"') }}
 keystone_log_facility: {{ config.keystone_log_facility | default('"%{hiera(\'log_facility\')}"') }}
 
-{% if config.keystone_db_allowed_hosts %}
-keystone_db_allowed_hosts:
-{% for db_allowed_host in config.keystone_db_allowed_hosts %}  - {{ db_allowed_host }}
-{% endfor %}
-{% else %}
-keystone_db_allowed_hosts: "%{hiera('db_allowed_hosts')}"
-{% endif %}
+keystone_db_allowed_hosts: {{ config.keystone_db_allowed_hosts | default('"%{hiera(\'db_allowed_hosts\')}"') }}
 keystone_db_host: {{ config.keystone_db_host | default('"%{hiera(\'galera_ip\')}"') }}
 keystone_db_user: {{ config.keystone_db_user | default('keystone') }}
 keystone_db_password: {{ config.keystone_db_password | default('keystonepassword') }}
@@ -551,6 +460,7 @@ keystone_db_password: {{ config.keystone_db_password | default('keystonepassword
 ks_admin_email: {{ config.ks_admin_email | default('no-reply@keystone.openstack') }}
 ks_admin_password: {{ config.ks_admin_password | default('adminpassword') }}
 ks_admin_token: {{ config.ks_admin_token | default('') }}
+ks_admin_roles: {{ config.ks_admin_roles | default(['admin', 'heat_stack_owner']) }}
 ks_admin_tenant: {{ config.ks_admin_tenant | default('admin') }}
 
 keystone_port: {{ config.keystone_port | default('5000') }}
@@ -567,6 +477,7 @@ ks_token_expiration: {{ config.ks_token_expiration | default('3600') }}
 ks_token_driver: {{ config.ks_token_driver | default('keystone.token.backends.sql.Token') }}
 
 # Nova
+nova_scheduler_default_filters: {{ config.nova_scheduler_default_filters | default('false') }}
 nova_verbose: {{ config.nova_verbose | default('"%{hiera(\'verbose\')}"') }}
 nova_debug: {{ config.nova_debug | default('"%{hiera(\'debug\')}"') }}
 nova_use_syslog: {{ config.nova_use_syslog | default('"%{hiera(\'use_syslog\')}"') }}
@@ -577,43 +488,19 @@ nova_shell: {{ config.nova_shell | default('/bin/bash') }}
 nova_api: {{ config.nova_api | default('true') }}
 nova_ec2_api: {{ config.nova_ec2_api | default('true') }}
 nova_metadata_api: {{ config.nova_metadata_api | default('true') }}
-spice: {{ config.spice | default('true') }}
+spice: {{ config.spice | default('false') }}
 
-{% if config.nova_bind_options %}
-nova_bind_options:
-{% for bind_option in config.nova_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-nova_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
-{% if config.nova_metadata_bind_options %}
-nova_metadata_bind_options:
-{% for bind_option in config.nova_metadata_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-nova_metadata_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
-{% if config.nova_ec2_bind_options %}
-nova_ec2_bind_options:
-{% for bind_option in config.nova_ec2_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-nova_ec2_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
-{% if config.spice_bind_options %}
-spice_bind_options:
-{% for bind_option in config.spice_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-spice_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
-
-nova_endpoint_type: {{ config.nova_endpoint_type | default('"%{hiera(\'endpoint_type\')}"') }}
+nova_bind_options: {{ config.nova_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+nova_metadata_bind_options: {{ config.nova_metadata_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+nova_ec2_bind_options: {{ config.nova_ec2_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+spice_bind_options: {{ config.spice_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 nova_port: {{ config.nova_port | default('8774') }}
 nova_ec2_port: {{ config.nova_ec2_port | default('8773') }}
 nova_metadata_port: {{ config.nova_metadata_port | default('8775') }}
 spice_port: {{ config.spice_port | default('6082') }}
+novnc_port: {{ config.novnc_port | default('6080') }}
+nova_console: {{ config.nova_console | default('novnc') }}
 spice_secure: {{ config.spice_secure | default('false') }}
 
 ks_nova_admin_host: {{ config.nova_admin_host | default('"%{hiera(\'vip_admin_fqdn\')}"') }}
@@ -623,14 +510,10 @@ ks_nova_internal_proto: {{ config.nova_internal_proto | default('"%{hiera(\'endp
 ks_nova_public_host: {{ config.nova_public_host | default('"%{hiera(\'vip_public_fqdn\')}"') }}
 ks_nova_public_proto: {{ config.nova_public_proto | default('"%{hiera(\'endpoint_public_protocol\')}"') }}
 ks_nova_password: {{ config.ks_nova_password | default('novapassword') }}
+ks_console_public_host: {{ config.console_public_host | default('"%{hiera(\'vip_public_fqdn\')}"') }}
+ks_console_public_proto: {{ config.console_public_proto | default('"%{hiera(\'endpoint_public_protocol\')}"') }}
 
-{% if config.nova_db_allowed_hosts %}
-nova_db_allowed_hosts:
-{% for db_allowed_host in config.nova_db_allowed_hosts %}  - {{ db_allowed_host }}
-{% endfor %}
-{% else %}
-nova_db_allowed_hosts: "%{hiera('db_allowed_hosts')}"
-{% endif %}
+nova_db_allowed_hosts: {{ config.nova_db_allowed_hosts | default('"%{hiera(\'db_allowed_hosts\')}"') }}
 nova_db_host: {{ config.nova_db_host | default('"%{hiera(\'galera_ip\')}"') }}
 nova_db_user: {{ config.nova_db_user | default('nova') }}
 nova_db_password: {{ config.nova_db_password | default('novapassword') }}
@@ -672,13 +555,7 @@ neutron_use_syslog: {{ config.neutron_use_syslog | default('"%{hiera(\'use_syslo
 neutron_log_facility: {{ config.neutron_log_facility | default('"%{hiera(\'log_facility\')}"') }}
 
 neutron_api: {{ config.neutron_api | default('true') }}
-{% if config.neutron_bind_options %}
-neutron_bind_options:
-{% for bind_option in config.neutron_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-neutron_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+neutron_bind_options: {{ config.neutron_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 neutron_port: {{ config.neutron_port | default('9696') }}
 
@@ -690,13 +567,7 @@ ks_neutron_public_host: {{ config.neutron_public_host | default('"%{hiera(\'vip_
 ks_neutron_public_proto: {{ config.neutron_public_proto | default('"%{hiera(\'endpoint_public_protocol\')}"') }}
 ks_neutron_password: {{ config.ks_neutron_password | default('neutronpassword') }}
 
-{% if config.neutron_db_allowed_hosts %}
-neutron_db_allowed_hosts:
-{% for db_allowed_host in config.neutron_db_allowed_hosts %}  - {{ db_allowed_host }}
-{% endfor %}
-{% else %}
-neutron_db_allowed_hosts: "%{hiera('db_allowed_hosts')}"
-{% endif %}
+neutron_db_allowed_hosts: {{ config.neutron_db_allowed_hosts | default('"%{hiera(\'db_allowed_hosts\')}"') }}
 neutron_db_host: {{ config.neutron_db_host | default('"%{hiera(\'galera_ip\')}"') }}
 neutron_db_user: {{ config.neutron_db_user | default('neutron') }}
 neutron_db_password: {{ config.neutron_db_password | default('neutronpassword') }}
@@ -720,23 +591,36 @@ neutron_manage_haproxy_pkg: {{ config.neutron_manage_haproxy_pkg | default('fals
 neutron_plugin: {{ config.neutron_plugin | default('ml2') }}
 neutron_driver: {{ config.neutron_driver | default('ml2_ovs') }}
 neutron_veth_mtu: {{ config.neutron_veth_mtu | default('1500') }}
-neutron_dnsmasq_dns_server: {{ config.neutron_dnsmasq_dns_server | default('false') }}
+neutron_dnsmasq_dns_servers: {{ config.neutron_dnsmasq_dns_servers | default('false') }}
 
 neutron_metadata_enabled: {{ config.neutron_metadata_enabled | default('true') }}
 neutron_external_int: {{ config.neutron_external_int | default('"%{hiera(\'external_netif\')}"') }}
 neutron_external_bridge: {{ config.neutron_external_bridge | default('br-pub') }}
 neutron_manage_external_network: {{ config.neutron_manage_external_network | default('false') }}
 neutron_tunnel_eth: {{ config.neutron_tunnel_eth | default('"%{hiera(\'internal_netif_ip\')}"') }}
-neutron_tunnel_types:
-{% for tunnel_type in config.neutron_tunnel_types | default(['gre']) %} - {{ tunnel_type }}
-{% endfor %}
-neutron_tenant_network_types:
-{% for tenant_network_type in config.neutron_tenant_network_types | default(['gre']) %} - {{ tenant_network_type }}
-{% endfor %}
-neutron_type_drivers:
-{% for type_driver in config.neutron_type_drivers | default(['gre','vlan','flat']) %} - {{ type_driver}}
-{% endfor %}
+
+neutron_tunnel_types: {{ config.neutron_tunnel_types | default(['gre']) }}
+neutron_tenant_network_types: {{ config.neutron_tenant_network_types  | default(['gre']) }}
+neutron_type_drivers: {{ config.neutron_type_drivers | default(['gre','vlan','flat']) }}
 neutron_external_provider_net: {{ config.neutron_external_provider_net | default('false') }}
+neutron_l3_ha_enabled: {{ config.neutron_l3_ha_enabled | default('false') }}
+neutron_l3_ha_vrrp_auth_type: {{ config.neutron_l3_ha_vrrp_auth_type | default('PASS') }}
+neutron_l3_ha_vrrp_auth_password: {{ config.neutron_l3_ha_vrrp_auth_password | default('secrete') }}
+neutron_l3_allow_automatic_l3agent_failover: {{ config.neutron_l3_allow_automatic_l3agent_failover | default('false') }}
+neutron_l3_agent_mode: {{ config.neutron_l3_agent_mode | default('legacy') }}
+enable_distributed_routing: {{ config.enable_distributed_routing | default('false') }}
+
+{% if config.neutron_mechanism_drivers %}
+neutron_mechanism_drivers: {{ config.neutron_mechanism_drivers }}
+{% endif %}
+
+{% if config.neutron_tunnel_id_ranges %}
+neutron_tunnel_id_ranges: {{ config.neutron_tunnel_id_ranges }}
+{% endif %}
+
+{% if config.neutron_vni_ranges %}
+neutron_vni_ranges: {{ config.neutron_vni_ranges }}
+{% endif %}
 
 # Neutron N1KV Settings
 neutron_n1kv_vsm_ip: {{ config.neutron_n1kv_vsm_ip | default('127.0.0.1') }}
@@ -750,7 +634,7 @@ neutron_uplink_profile:
 {% for check, desc in config.neutron_uplink_profile.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -761,7 +645,7 @@ neutron_vtep_config:
 {% for check, desc in config.neutron_vtep_config.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -770,17 +654,15 @@ neutron_vtep_config: {}
 neutron_node_type: {{ config.neutron_node_type | default('compute') }}
 neutron_vteps_in_same_subnet: {{ config.neutron_vteps_in_same_subnet | default('false') }}
 
+# novnc
+novnc: {{ config.novnc | default('true') }}
+novnc_bind_options: {{ config.novnc_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+novnc_port: {{ config.novnc_port | default('6080') }}
 
 # Trove
 trove_enabled: {{ config.trove_enabled | default('false') }}
 trove_api: {{ config.trove_api | default('false') }}
-{% if config.trove_bind_options %}
-trove_bind_options:
-{% for bind_option in config.trove_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-trove_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+trove_bind_options: {{ config.trove_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 trove_port: {{ config.trove_port | default('8779') }}
 
@@ -792,13 +674,7 @@ ks_trove_public_host: {{ config.trove_public_host | default('"%{hiera(\'vip_publ
 ks_trove_public_proto: {{ config.trove_public_proto | default('"%{hiera(\'endpoint_public_protocol\')}"') }}
 ks_trove_password: {{ config.ks_trove_password | default('trovepassword') }}
 
-{% if config.trove_db_allowed_hosts %}
-trove_db_allowed_hosts:
-{% for db_allowed_host in config.trove_db_allowed_hosts %}  - {{ db_allowed_host }}
-{% endfor %}
-{% else %}
-trove_db_allowed_hosts: "%{hiera('db_allowed_hosts')}"
-{% endif %}
+trove_db_allowed_hosts: {{ config.trove_db_allowed_hosts | default('"%{hiera(\'db_allowed_hosts\')}"') }}
 trove_db_host: {{ config.trove_db_host | default('"%{hiera(\'galera_ip\')}"') }}
 trove_db_user: {{ config.trove_db_user | default('trove') }}
 trove_db_password: {{ config.trove_db_password | default('trovepassword') }}
@@ -811,13 +687,7 @@ swift_enabled: {{ config.swift_enabled | default('true') }}
 swift_ringbuilder_enabled: {{ config.swift_ringbuilder_enabled | default('false') }}
 
 swift_api: {{ config.swift_api | default('true') }}
-{% if config.swift_bind_options %}
-swift_bind_options:
-{% for bind_option in config.swift_bind_options %} - {{ bind_option }}
-{% endfor %}
-{% else %}
-swift_bind_options: "%{hiera('haproxy_default_bind_options')}"
-{% endif %}
+swift_bind_options: {{ config.swift_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
 
 swift_port: {{ config.swift_port | default('8080') }}
 container_port: {{ config.container_port| default('6001') }}
@@ -834,9 +704,7 @@ ks_swift_password: {{ config.ks_swift_password | default('swiftpassword') }}
 ks_swift_dispersion_password: {{ config.ks_swift_dispersion_password | default('dispersion') }}
 
 swift_hash_suffix: {{ config.swift_hash_suffix }}
-swift_components:
-{% for component in config.swift_components | default(['account', 'container','object']) %} - {{ component }}
-{% endfor %}
+swift_components: {{ config.swift_components | default(['account', 'container','object']) }}
 swift_rsync_max_connections: {{ config.swift_rsync_max_connections | default('5') }}
 swift_ring_container_device: {{ config.swift_ring_container_device | default('sdb') }}
 swift_ring_account_device: {{ config.swift_ring_account_device | default('sdb') }}
@@ -845,7 +713,7 @@ swift_device_config_hash:
 {% for check, desc in config.swift_device_config_hash.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -853,15 +721,15 @@ swift_device_config_hash: {}
 {% endif %}
 
 swift_fstype: {{ config.swift_fstype | default('xfs') }}
-# DEPRECATED @@VERSIONS@@
+# BEGIN DEPRECATED @@VERSIONS@@
 replicas: {{ config.replicas | default('3') }}
+# END
+
 swift_replicas: {{ config.swift_replicas | default('3') }}
 swift_rsyncd_ipaddress: {{ config.swift_rsyncd_ipaddress | default('"%{hiera(\'internal_netif_ip\')}"')}}
 statsd_host: {{ config.statsd_host | default('"%{hiera(\'internal_netif_ip\')}"') }}
 statsd_port: {{ config.statsd_port | default('4125') }}
-swift_identity_roles_addons:
-{% for role in config.swift_identity_roles_addons | default(['SwiftOperator', 'ResellerAdmin']) %} - {{ role }}
-{% endfor %}
+swift_identity_roles_addons: {{ config.swift_identity_roles_addons | default(['SwiftOperator', 'ResellerAdmin']) }}
 
 # Monitoring
 {% if config.sensu_checks %}
@@ -869,7 +737,7 @@ sensu_checks:
 {% for check, desc in config.sensu_checks.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -880,7 +748,7 @@ sensu_handlers:
 {% for check, desc in config.sensu_handlers.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -891,7 +759,7 @@ sensu_plugins:
 {% for check, desc in config.sensu_plugins.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -900,7 +768,11 @@ sensu_plugins: {}
 sensu_rabbitmq_user: {{ config.sensu_rabbitmq_user | default('sensu') }}
 sensu_rabbitmq_password: {{ config.sensu_rabbitmq_password | default('rabbitpassword') }}
 sensu_rabbitmq_vhost: {{ config.sensu_rabbitmq_vhost | default ('/sensu') }}
-sensu_uchiwa_ip: {{ config.sensu_uchiwa_ip | default('127.0.0.01') }}
+sensu_install_repo: {{ config.sensu_install_repo | default('false') }}
+sensu_uchiwa_ip: {{ config.sensu_uchiwa_ip | default('"%{::ipaddress}"') }}
+sensu_uchiwa_user: {{ config.sensu_uchiwa_user | default('admin') }}
+sensu_uchiwa_password: {{ config.sensu_uchiwa_password | default('password') }}
+sensu_uchiwa_install_repo: {{ config.sensu_uchiwa_install_repo | default('false') }}
 
 # Logging
 logging_syslog_enable: {{ config.logging_syslog_enable | default('true') }}
@@ -909,7 +781,7 @@ logging_matches:
 {% for check, desc in config.logging_matches.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -920,7 +792,7 @@ logging_sources:
 {% for check, desc in config.logging_sources.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -931,7 +803,7 @@ logging_plugins:
 {% for check, desc in config.logging_plugins.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
@@ -942,22 +814,62 @@ logging_logrotate_rule:
 {% for check, desc in config.logging_logrotate_rule.iteritems() %}
   {{ check }}:
   {% for key, value in desc.iteritems() %}
-    {{ key }}: {{ value }}
+    {{ key }}: '{{ value }}'
   {% endfor %}
 {% endfor %}
 {% else %}
 logging_logrotate_rule: {}
 {% endif %}
 
+fluentd::version: {{ config.fluentd_version | default('2') }}
+kibana3: {{ config.kibana3 | default('true') }}
+kibana3_bind_options: {{ config.kibana3_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+kibana3_port: {{ config.kibana_port | default('\'8300\'') }}
+kibana3::ws_extras:
+  ip: {{ config.kibana_bind_ip | default('"%{hiera(\'internal_netif_ip\')}"') }}
+kibana3::ws_servername: {{ config.kibana_servername | default('"%{hiera(\'vip_public_fqdn\')}"') }}
+kibana3::ws_port: {{ config.kibana_port | default('"%{hiera(\'kibana3_port\')}"') }}
+kibana3::manage_git_repository: {{ config.kibana_manage_git_repository | default('false') }}
+kibana3::manage_ws: {{ config.kibana_manage_ws | default('true') }}
+kibana3::config_es_server: {{ config.kibana_es_server | default('"%{hiera(\'vip_internal_ip\')}"') }}
+kibana3::config_kibana_index: {{ config.kibana_es_index | default('fluentd') }}
+kibana_bind_ip: {{ config.kibana_bind_ip | default('"%{hiera(\'internal_netif_ip\')}"') }}
+elasticsearch: {{ config.elasticsearch | default('true') }}
+elasticsearch_bind_options: {{ config.elasticsearch_bind_options | default('"%{hiera(\'haproxy_default_bind_options\')}"') }}
+elasticsearch_port: {{ config.elasticsearch_port | default('\'9200\'') }}
+elasticsearch_bind_ip: {{ config.elasticsearch_bind_ip | default('"%{hiera(\'internal_netif_ip\')}"') }}
+elasticsearch::config:
+  'cluster.name': fluentd
+  'network.host': {{ config.elasticsearch_bind_ip | default('"%{hiera(\'internal_netif_ip\')}"') }}
+
 # Rsyslog
-rsyslog::client::log_remote: true
+rsyslog::client::log_remote: {{ config.syslog_log_remote | default('true') }}
+rsyslog::client::log_local: {{ config.syslog_log_local | default('true') }}
 rsyslog::client::remote_type: udp
 rsyslog::client::remote_forward_format: RSYSLOG_TraditionalForwardFormat
 rsyslog::client::port: {{ config.syslog_port }}
 rsyslog::client::server: {{ config.syslog_server }}
 
+# PuppetDB
+puppetdb::disable_ssl: true
+{% if config.puppetdb_server %}
+puppetdb::master::config::puppetdb_server: {{ config.puppetdb_server }}
+{% else %}
+{% for hname in hosts %}
+{% if hosts[hname].profile == 'install-server' %}
+puppetdb::master::config::puppetdb_server: {{ hname }}
+{% endif %}
+{% endfor %}
+{% endif %}
+puppetdb::master::config::manage_report_processor: true
+puppetdb::master::config::restart_puppet: false
+puppetdb::master::config::enable_reports: true
+puppetdb::master::config::strict_validation: false
+puppetdb::master::config::puppetdb_port: 8081
+puppetdb::master::config::masterless: true
+
 # HAproxy
 haproxy_auth: {{ config.haproxy_auth | default('admin:changeme') }}
 
-classes:
-  - cloud
+# Apache Httpd
+apache::default_vhost: false

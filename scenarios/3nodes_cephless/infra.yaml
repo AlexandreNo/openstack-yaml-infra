@@ -1,7 +1,4 @@
-# all-without-ceph-osd is for server without enough disks to run Ceph OSD devices
-# otherwise, we should use all-with-ceph-osd
-
-name: 3nodes
+name: 3nodes_cephless
 profiles:
   install-server:
     arity: 1
@@ -23,18 +20,14 @@ profiles:
           - cloud::database::nosql::mongodb::mongod
           - cloud::messaging
           - cloud::database::nosql::memcached
-          - cloud::storage::rbd::monitor
-          - cloud::storage::rbd::key
       2:
         roles:
           - cloud::loadbalancer
-          - cloud::storage::rbd::osd
           - cloud::dashboard
           - cloud::object::storage
       3:
         roles:
           - cloud::identity
-          - cloud::storage::rbd::pools
       4:
         roles:
           - cloud::compute::api
@@ -98,11 +91,9 @@ serverspec:
   cloud::messaging: messaging
   cloud::database::nosql::memcached: cache
   cloud::database::nosql::redis::server: redis_server
-  cloud::storage::rbd::monitor: storage_controller
   cloud::identity: identity
   cloud::network::dhcp: network
   cloud::loadbalancer: lb
-  cloud::storage::rbd::osd: storage_node
   cloud::compute::hypervisor: compute
   cloud::compute::api: controller
   cloud::dashboard: dashboard

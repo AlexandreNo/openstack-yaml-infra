@@ -1,7 +1,4 @@
-# all-without-ceph-osd is for server without enough disks to run Ceph OSD devices
-# otherwise, we should use all-with-ceph-osd
-
-name: 3nodes
+name: 3ctrl_xcpt
 profiles:
   install-server:
     arity: 1
@@ -13,7 +10,7 @@ profiles:
           - cloud::install::puppetdb::server
     serverspec_config:
       puppetdb_server: puppetdb_server
-  openstack-full:
+  controller:
     arity: 3
     edeploy: openstack-full
     steps:
@@ -42,12 +39,7 @@ profiles:
           - cloud::compute::conductor
           - cloud::compute::consoleauth
           - cloud::compute::consoleproxy
-          - cloud::compute::hypervisor
           - cloud::compute::scheduler
-# Experimental
-#          - cloud::database::dbaas::api
-#          - cloud::database::dbaas::conductor
-#          - cloud::database::dbaas::taskmanager
           - cloud::volume::api
           - cloud::volume::backup
           - cloud::volume::scheduler
@@ -88,10 +80,34 @@ profiles:
       syslog_server: syslog_server
       syslog_port: syslog_port
       puppetdb_server: puppetdb_server
-
+  compute:
+    arity: 1+n
+    edeploy: openstack-full
+    steps:
+      4:
+        roles:
+          - cloud::compute::hypervisor
+    serverspec_config:
+      ks_user_name: ks_admin_tenant
+      ks_user_password: ks_admin_password
+      ks_tenant_name: ks_admin_tenant
+      vip_public: vip_public_fqdn
+      endpoint_protocol: endpoint_protocol
+      virt_type: libvirt_type
+      neutron_password: ks_neutron_password
+      neutron_endpoint: vip_public_fqdn
+      neutron_protocol: ks_neutron_admin_proto
+      neutron_type_drivers: neutron_type_drivers
+      neutron_mechanism_drivers: neutron_mechanism_drivers
+      neutron_tunnel_id_ranges: neutron_tunnel_id_ranges
+      neutron_firewall_driver: neutron_firewall_driver
+      syslog_server: syslog_server
+      syslog_port: syslog_port
+      puppetdb_server: puppetdb_server
 ordered_profiles:
   - install-server
-  - openstack-full
+  - controller
+  - compute
 
 serverspec:
   cloud::database::sql::mysql: database

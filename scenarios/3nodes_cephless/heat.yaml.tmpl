@@ -145,26 +145,7 @@ resources:
             permissions: 0440
             content: |
               Defaults:jenkins !requiretty
-{% if config.puppetdb_pem and hosts[hname].profile == 'install-server' %}          - path: /etc/ssl/certs/puppetdb.pem
-            permissions: 0400
-            owner: root:root
-            content: |
-              {{ config.puppetdb_pem|indent(14) }}{% endif -%}
-
 {% if hosts[hname].profile != 'install-server' -%}
-{% for dev in config.ceph_osd_devices %}
-  {{ hname }}_{{ dev }}:
-    type: OS::Cinder::Volume
-    properties:
-      size: {{ config.volume_size }}
-
-  {{ hname }}_{{ dev }}_attachment:
-    type: OS::Cinder::VolumeAttachment
-    properties:
-      volume_id: { get_resource: {{ hname }}_{{ dev }} }
-      instance_uuid: { get_resource: {{ hname }} }
-      mountpoint: /dev/{{ dev }}
-{% endfor -%}
 {% for dev in config.swift_storage_devices %}
   {{ hname }}_{{ dev }}:
     type: OS::Cinder::Volume
