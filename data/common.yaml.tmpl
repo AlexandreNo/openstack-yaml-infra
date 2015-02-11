@@ -419,7 +419,7 @@ ceph_mon_secret: {{ config.ceph_mon_secret }}
 {% if config.ceph_osd_devices %}
 ceph_osd_devices:
 {% if config.ceph_osd_devices is mapping %}
-{% for disk in config.ceph_osd_devices %} {{ disk }}{% if disk.journal is defined %}:
+{% for disk in config.ceph_osd_devices %} {{ disk }}:{% if disk.journal is defined %}
     {{ disk.journal }}
 {% endif %}
 {% endfor %}
